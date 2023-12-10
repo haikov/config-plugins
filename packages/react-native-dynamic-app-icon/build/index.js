@@ -11,7 +11,12 @@ const path_1 = __importDefault(require("path"));
 const pbxFile_1 = __importDefault(require("xcode/lib/pbxFile"));
 const folderName = "DynamicAppIcons";
 const size = 60;
-const scales = [2, 3];
+const imageSizes = [
+    { scale: 2, size: size * 2 },
+    { scale: 3, size: size * 3 },
+    { scale: 2, size: 152, isIpad: true },
+    { scale: 3, size: 167, isIpad: true },
+];
 function arrayToImages(images) {
     return images.reduce((prev, curr, i) => ({ ...prev, [i]: { image: curr } }), {});
 }
@@ -29,9 +34,12 @@ const withDynamicIcon = (config, props = {}) => {
     config = withIconImages(config, { icons: prepped });
     return config;
 };
-function getIconName(name, size, scale) {
+function getIconName(name, size, scale, isIpad) {
     const fileName = `${name}-Icon-${size}x${size}`;
     if (scale != null) {
+        if (isIpad) {
+            return `${fileName}@${scale}x~ipad.png`;
+        }
         return `${fileName}@${scale}x.png`;
     }
     return fileName;
@@ -72,8 +80,8 @@ const withIconXcodeProject = (config, { icons }) => {
         }
         // Link new assets
         await iterateIconsAsync({ icons }, async (key, icon, index) => {
-            for (const scale of scales) {
-                const iconFileName = getIconName(key, size, scale);
+            for (const imageSize of imageSizes) {
+                const iconFileName = getIconName(key, size, imageSize.scale, imageSize.isIpad);
                 if (!group?.children.some(({ comment }) => comment === iconFileName)) {
                     // Only write the file if it doesn't already exist.
                     config.modResults = config_plugins_1.IOSConfig.XcodeUtils.addResourceFileToGroup({
@@ -143,11 +151,11 @@ async function createIconsAsync(config, { icons }) {
     await fs_1.default.promises.mkdir(path_1.default.join(iosRoot, folderName), { recursive: true });
     // Generate new assets
     await iterateIconsAsync({ icons }, async (key, icon) => {
-        for (const scale of scales) {
-            const iconFileName = getIconName(key, size, scale);
+        for (const imageSize of imageSizes) {
+            const iconFileName = getIconName(key, size, imageSize.scale, imageSize.isIpad);
             const fileName = path_1.default.join(folderName, iconFileName);
             const outputPath = path_1.default.join(iosRoot, fileName);
-            const scaledSize = scale * size;
+            const scaledSize = imageSize.scale * size;
             const { source } = await (0, image_utils_1.generateImageAsync)({
                 projectRoot: config.modRequest.projectRoot,
                 cacheType: "react-native-dynamic-app-icon",
@@ -157,8 +165,8 @@ async function createIconsAsync(config, { icons }) {
                 removeTransparency: true,
                 backgroundColor: "#ffffff",
                 resizeMode: "cover",
-                width: scaledSize,
-                height: scaledSize,
+                width: imageSize.size || scaledSize,
+                height: imageSize.size || scaledSize,
             });
             await fs_1.default.promises.writeFile(outputPath, source);
         }

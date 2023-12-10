@@ -13,8 +13,20 @@ import path from "path";
 import pbxFile from "xcode/lib/pbxFile";
 
 const folderName = "DynamicAppIcons";
+
+type ImageSizeEntry = {
+  scale: number;
+  size?: number;
+  isIpad?: boolean;
+};
+
 const size = 60;
-const scales = [2, 3];
+const imageSizes: ImageSizeEntry[] = [
+  { scale: 2, size: size * 2 },
+  { scale: 3, size: size * 3 },
+  { scale: 2, size: 152, isIpad: true },
+  { scale: 3, size: 167, isIpad: true },
+];
 
 type IconSet = Record<string, { image: string; prerendered?: boolean }>;
 
@@ -49,10 +61,19 @@ const withDynamicIcon: ConfigPlugin<string[] | IconSet | void> = (
   return config;
 };
 
-function getIconName(name: string, size: number, scale?: number) {
+function getIconName(
+  name: string,
+  size: number,
+  scale?: number,
+  isIpad?: boolean
+) {
   const fileName = `${name}-Icon-${size}x${size}`;
 
   if (scale != null) {
+    if (isIpad) {
+      return `${fileName}@${scale}x~ipad.png`;
+    }
+
     return `${fileName}@${scale}x.png`;
   }
   return fileName;
@@ -110,8 +131,13 @@ const withIconXcodeProject: ConfigPlugin<Props> = (config, { icons }) => {
     // Link new assets
 
     await iterateIconsAsync({ icons }, async (key, icon, index) => {
-      for (const scale of scales) {
-        const iconFileName = getIconName(key, size, scale);
+      for (const imageSize of imageSizes) {
+        const iconFileName = getIconName(
+          key,
+          size,
+          imageSize.scale,
+          imageSize.isIpad
+        );
 
         if (
           !group?.children.some(
@@ -207,12 +233,17 @@ async function createIconsAsync(
   await fs.promises.mkdir(path.join(iosRoot, folderName), { recursive: true });
   // Generate new assets
   await iterateIconsAsync({ icons }, async (key, icon) => {
-    for (const scale of scales) {
-      const iconFileName = getIconName(key, size, scale);
+    for (const imageSize of imageSizes) {
+      const iconFileName = getIconName(
+        key,
+        size,
+        imageSize.scale,
+        imageSize.isIpad
+      );
       const fileName = path.join(folderName, iconFileName);
       const outputPath = path.join(iosRoot, fileName);
 
-      const scaledSize = scale * size;
+      const scaledSize = imageSize.scale * size;
       const { source } = await generateImageAsync(
         {
           projectRoot: config.modRequest.projectRoot,
@@ -224,8 +255,8 @@ async function createIconsAsync(
           removeTransparency: true,
           backgroundColor: "#ffffff",
           resizeMode: "cover",
-          width: scaledSize,
-          height: scaledSize,
+          width: imageSize.size || scaledSize,
+          height: imageSize.size || scaledSize,
         }
       );
 
