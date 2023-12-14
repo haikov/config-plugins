@@ -16,14 +16,16 @@ const folderName = "DynamicAppIcons";
 
 type ImageSizeEntry = {
   scale: number;
+  // If not provided, will use scale * baseSize
   size?: number;
+  // If true, will use ~ipad suffix in asset name
   isIpad?: boolean;
 };
 
-const size = 60;
+const baseSize = 60;
 const imageSizes: ImageSizeEntry[] = [
-  { scale: 2, size: size * 2 },
-  { scale: 3, size: size * 3 },
+  { scale: 2 },
+  { scale: 3 },
   { scale: 2, size: 152, isIpad: true },
   { scale: 3, size: 167, isIpad: true },
 ];
@@ -134,7 +136,7 @@ const withIconXcodeProject: ConfigPlugin<Props> = (config, { icons }) => {
       for (const imageSize of imageSizes) {
         const iconFileName = getIconName(
           key,
-          size,
+          baseSize,
           imageSize.scale,
           imageSize.isIpad
         );
@@ -174,7 +176,7 @@ const withIconInfoPlist: ConfigPlugin<Props> = (config, { icons }) => {
         CFBundleIconFiles: [
           // Must be a file path relative to the source root (not a icon set it seems).
           // i.e. `Bacon-Icon-60x60` when the image is `ios/somn/appIcons/Bacon-Icon-60x60@2x.png`
-          getIconName(key, size),
+          getIconName(key, baseSize),
         ],
         UIPrerenderedIcon: !!icon.prerendered,
       };
@@ -236,14 +238,14 @@ async function createIconsAsync(
     for (const imageSize of imageSizes) {
       const iconFileName = getIconName(
         key,
-        size,
+        baseSize,
         imageSize.scale,
         imageSize.isIpad
       );
       const fileName = path.join(folderName, iconFileName);
       const outputPath = path.join(iosRoot, fileName);
 
-      const scaledSize = imageSize.scale * size;
+      const scaledSize = imageSize.scale * baseSize;
       const { source } = await generateImageAsync(
         {
           projectRoot: config.modRequest.projectRoot,

@@ -10,10 +10,10 @@ const path_1 = __importDefault(require("path"));
 // @ts-ignore
 const pbxFile_1 = __importDefault(require("xcode/lib/pbxFile"));
 const folderName = "DynamicAppIcons";
-const size = 60;
+const baseSize = 60;
 const imageSizes = [
-    { scale: 2, size: size * 2 },
-    { scale: 3, size: size * 3 },
+    { scale: 2 },
+    { scale: 3 },
     { scale: 2, size: 152, isIpad: true },
     { scale: 3, size: 167, isIpad: true },
 ];
@@ -81,7 +81,7 @@ const withIconXcodeProject = (config, { icons }) => {
         // Link new assets
         await iterateIconsAsync({ icons }, async (key, icon, index) => {
             for (const imageSize of imageSizes) {
-                const iconFileName = getIconName(key, size, imageSize.scale, imageSize.isIpad);
+                const iconFileName = getIconName(key, baseSize, imageSize.scale, imageSize.isIpad);
                 if (!group?.children.some(({ comment }) => comment === iconFileName)) {
                     // Only write the file if it doesn't already exist.
                     config.modResults = config_plugins_1.IOSConfig.XcodeUtils.addResourceFileToGroup({
@@ -108,7 +108,7 @@ const withIconInfoPlist = (config, { icons }) => {
                 CFBundleIconFiles: [
                     // Must be a file path relative to the source root (not a icon set it seems).
                     // i.e. `Bacon-Icon-60x60` when the image is `ios/somn/appIcons/Bacon-Icon-60x60@2x.png`
-                    getIconName(key, size),
+                    getIconName(key, baseSize),
                 ],
                 UIPrerenderedIcon: !!icon.prerendered,
             };
@@ -152,10 +152,10 @@ async function createIconsAsync(config, { icons }) {
     // Generate new assets
     await iterateIconsAsync({ icons }, async (key, icon) => {
         for (const imageSize of imageSizes) {
-            const iconFileName = getIconName(key, size, imageSize.scale, imageSize.isIpad);
+            const iconFileName = getIconName(key, baseSize, imageSize.scale, imageSize.isIpad);
             const fileName = path_1.default.join(folderName, iconFileName);
             const outputPath = path_1.default.join(iosRoot, fileName);
-            const scaledSize = imageSize.scale * size;
+            const scaledSize = imageSize.scale * baseSize;
             const { source } = await (0, image_utils_1.generateImageAsync)({
                 projectRoot: config.modRequest.projectRoot,
                 cacheType: "react-native-dynamic-app-icon",
